@@ -21,8 +21,8 @@
       }
       .frame { position: fixed; inset: 0; padding: 24px; display: grid; grid-template-rows: auto 1fr auto; }
       .top { font-size: 12px; letter-spacing: 0.02em; color: var(--muted); display: flex; align-items: center; }
-      .center { display: grid; place-items: center; }
-      pre#ascii { margin: 0; line-height: 1; font-size: clamp(12px, 2.8vw, 28px); color: #e5e5e5; white-space: pre; text-align: center; opacity: .95; }
+      .center { display: grid; place-items: center; min-height: 0; }
+      pre#ascii { margin: 0; line-height: 1; font-size: 12px; color: #e5e5e5; white-space: pre; text-align: center; opacity: .95; display: inline-block; max-width: 100%; max-height: 100%; overflow: hidden; }
       .bottom { display: flex; justify-content: space-between; align-items: end; color: var(--muted); font-size: 12px; }
       a { color: var(--fg); text-decoration: none; border-bottom: 1px dotted #4b5563; padding-bottom: 1px; }
       a:hover { color: #ffffff; border-bottom-color: #9ca3af; }
@@ -46,10 +46,51 @@
     <script>
       const yearEl = document.getElementById('year');
       yearEl.textContent = new Date().getFullYear();
+      const asciiEl = document.getElementById('ascii');
+      let asciiText = '';
+
+      function fitAsciiToViewport() {
+        if (!asciiText) return;
+        const container = document.querySelector('.center');
+        const maxW = container.clientWidth;
+        const maxH = container.clientHeight;
+        if (!maxW || !maxH) return;
+
+        // Start large to measure intrinsic size, then scale down to fit
+        asciiEl.style.fontSize = '100px';
+        // Force reflow
+        const w = asciiEl.scrollWidth;
+        const h = asciiEl.scrollHeight;
+        if (!w || !h) return;
+        const scale = Math.max(0.1, Math.min(maxW / w, maxH / h)) * 0.96; // small padding
+        asciiEl.style.fontSize = (100 * scale).toFixed(2) + 'px';
+      }
+
+      const debouncedFit = (() => {
+        let raf = 0;
+        return () => {
+          if (raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            fitAsciiToViewport();
+          });
+        };
+      })();
+
       fetch('ascii/defset.txt')
         .then(r => r.ok ? r.text() : Promise.reject(r.status))
-        .then(text => { document.getElementById('ascii').textContent = text.replace(/\n+$/,''); })
-        .catch(() => { document.getElementById('ascii').textContent = 'Defset'; });
+        .then(text => {
+          asciiText = text.replace(/\n+$/, '');
+          asciiEl.textContent = asciiText;
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(debouncedFit);
+          } else {
+            debouncedFit();
+          }
+        })
+        .catch(() => { asciiEl.textContent = 'Defset'; asciiText = 'Defset'; debouncedFit(); });
+
+      window.addEventListener('resize', debouncedFit);
     </script>
   </body>
   </html>
