@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Defset — Coming soon</title>
+    <meta name="description" content="Defset — Coming soon" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="/favicon.svg" />
+    <meta name="theme-color" content="#121212" />
+    <style>
+      :root { --bg: #111111; --fg: #e5e5e5; --muted: #9ca3af; }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0; background: var(--bg); color: var(--fg);
+        font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      }
+      .frame { position: fixed; inset: 0; padding: 24px; display: grid; grid-template-rows: auto 1fr auto; }
+      .top { font-size: 12px; letter-spacing: 0.02em; color: var(--muted); display: flex; align-items: center; }
+      .center { display: grid; place-items: center; }
+      pre#ascii { margin: 0; line-height: 1; font-size: clamp(12px, 2.8vw, 28px); color: #e5e5e5; white-space: pre; text-align: center; opacity: .95; }
+      .bottom { display: flex; justify-content: space-between; align-items: end; color: var(--muted); font-size: 12px; }
+      a { color: var(--fg); text-decoration: none; border-bottom: 1px dotted #4b5563; padding-bottom: 1px; }
+      a:hover { color: #ffffff; border-bottom-color: #9ca3af; }
+      @media (max-width: 640px) {
+        .frame { padding: 16px; }
+        pre#ascii { font-size: clamp(10px, 4.2vw, 16px); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="top">Coming soon</div>
+      <div class="center">
+        <pre id="ascii" aria-label="Defset ASCII art">Loading…</pre>
+      </div>
+      <div class="bottom">
+        <div>© <span id="year"></span> Defset</div>
+        <div><a href="mailto:contact@defset.studio">Contact</a></div>
+      </div>
+    </div>
+    <script>
+      const yearEl = document.getElementById('year');
+      yearEl.textContent = new Date().getFullYear();
+      fetch('ascii/defset.txt')
+        .then(r => r.ok ? r.text() : Promise.reject(r.status))
+        .then(text => { document.getElementById('ascii').textContent = text.replace(/\n+$/,''); })
+        .catch(() => { document.getElementById('ascii').textContent = 'Defset'; });
+    </script>
+  </body>
+  </html>
+
+
