@@ -11,7 +11,7 @@
     <link rel="icon" href="/favicon.svg" />
     <meta name="theme-color" content="#121212" />
     <style>
-      :root { --bg: #111111; --fg: #e5e5e5; --muted: #9ca3af; }
+      :root { --bg: #111111; --fg: #e5e5e5; --muted: #9ca3af; --pad: clamp(12px, 3vw, 24px); }
       * { box-sizing: border-box; }
       html, body { height: 100%; }
       body {
@@ -19,16 +19,15 @@
         font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
         -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
       }
-      .frame { position: fixed; inset: 0; padding: 24px; display: grid; grid-template-rows: auto 1fr auto; }
+      .frame { position: fixed; inset: 0; padding: var(--pad); padding-bottom: calc(var(--pad) + env(safe-area-inset-bottom)); padding-top: calc(var(--pad) + env(safe-area-inset-top)); display: grid; grid-template-rows: auto 1fr auto; }
       .top { font-size: 12px; letter-spacing: 0.02em; color: var(--muted); display: flex; align-items: center; }
-      .center { display: grid; place-items: center; min-height: 0; }
-      pre#ascii { margin: 0; line-height: 1; font-size: 12px; color: #e5e5e5; white-space: pre; text-align: center; opacity: .95; display: inline-block; max-width: 100%; max-height: 100%; overflow: hidden; }
+      .center { display: grid; place-items: center; min-height: 0; min-width: 0; }
+      pre#ascii { margin: 0; line-height: 1; font-size: 12px; color: #e5e5e5; white-space: pre; text-align: center; opacity: .95; display: inline-block; overflow: hidden; }
       .bottom { display: flex; justify-content: space-between; align-items: end; color: var(--muted); font-size: 12px; }
       a { color: var(--fg); text-decoration: none; border-bottom: 1px dotted #4b5563; padding-bottom: 1px; }
       a:hover { color: #ffffff; border-bottom-color: #9ca3af; }
       @media (max-width: 640px) {
-        .frame { padding: 16px; }
-        pre#ascii { font-size: clamp(10px, 4.2vw, 16px); }
+        pre#ascii { font-size: 12px; }
       }
     </style>
   </head>
@@ -56,41 +55,46 @@
         const maxH = container.clientHeight;
         if (!maxW || !maxH) return;
 
-        // Start large to measure intrinsic size, then scale down to fit
-        asciiEl.style.fontSize = '100px';
-        // Force reflow
-        const w = asciiEl.scrollWidth;
-        const h = asciiEl.scrollHeight;
-        if (!w || !h) return;
-        const scale = Math.max(0.1, Math.min(maxW / w, maxH / h)) * 0.96; // small padding
-        asciiEl.style.fontSize = (100 * scale).toFixed(2) + 'px';
+        let lo = 6, hi = 240; // px
+        for (let i = 0; i < 12; i++) {
+          const mid = (lo + hi) / 2;
+          asciiEl.style.fontSize = mid + 'px';
+          const rect = asciiEl.getBoundingClientRect();
+          if (rect.width <= maxW * 0.98 && rect.height <= maxH * 0.98) {
+            lo = mid;
+          } else {
+            hi = mid;
+          }
+        }
+        asciiEl.style.fontSize = lo + 'px';
       }
 
       const debouncedFit = (() => {
         let raf = 0;
         return () => {
           if (raf) cancelAnimationFrame(raf);
-          raf = requestAnimationFrame(() => {
-            raf = 0;
-            fitAsciiToViewport();
-          });
+          raf = requestAnimationFrame(() => { raf = 0; fitAsciiToViewport(); });
         };
       })();
 
       fetch('ascii/defset.txt')
         .then(r => r.ok ? r.text() : Promise.reject(r.status))
         .then(text => {
-          asciiText = text.replace(/\n+$/, '');
+          const normalized = text
+            .replace(/\r/g, '')
+            .split('\n')
+            .map(line => line.replace(/\s+$/, '')) // trim trailing spaces per-line
+            .join('\n')
+            .replace(/\n+$/, '');
+          asciiText = normalized;
           asciiEl.textContent = asciiText;
-          if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(debouncedFit);
-          } else {
-            debouncedFit();
-          }
+          (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve())
+            .then(debouncedFit);
         })
         .catch(() => { asciiEl.textContent = 'Defset'; asciiText = 'Defset'; debouncedFit(); });
 
       window.addEventListener('resize', debouncedFit);
+      window.addEventListener('orientationchange', debouncedFit);
     </script>
   </body>
   </html>
